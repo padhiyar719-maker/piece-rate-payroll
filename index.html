@@ -1,232 +1,414 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="gu">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Payroll Register</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<style>
-  body{background:#e9eff0;color:#1d2b4f;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-  .grid-wrap{overflow:auto;max-height:calc(100vh - 230px);border:1px solid #9db8c7;background:#fff}
-  table.reg{border-collapse:separate;border-spacing:0;width:100%;min-width:max-content}
-  table.reg th,table.reg td{border-right:1px solid #cddde4;border-bottom:1px solid #cddde4;padding:0}
-  table.reg thead th{position:sticky;top:0;background:#dbe8ee;z-index:3;padding:6px 8px;font-size:12px;line-height:1.2;text-align:center;font-weight:600}
-  table.reg .sticky-l{position:sticky;left:0;background:#f4f8f9;z-index:2;text-align:left;padding:0 10px;font-weight:600;white-space:nowrap;min-width:110px}
-  table.reg thead .sticky-l{z-index:4;background:#dbe8ee}
-  table.reg .sticky-r{position:sticky;right:0;background:#fff7e0;z-index:2;text-align:right;padding:0 10px;font-weight:700;white-space:nowrap;border-left:2px solid #c9a227}
-  table.reg thead .sticky-r{z-index:4;background:#f3e3a6}
-  table.reg tfoot td{position:sticky;bottom:0;background:#dbe8ee;font-weight:700;padding:6px 8px;text-align:center;z-index:3}
-  table.reg tfoot .sticky-l{z-index:5}table.reg tfoot .sticky-r{z-index:5;background:#f3e3a6}
-  .q{width:76px;height:40px;text-align:center;border:0;background:transparent;font-size:15px;outline:none}
-  .q:focus{background:#fff3b8;box-shadow:inset 0 0 0 2px #1d2b4f}
-  .q:not(:placeholder-shown){background:#eaf6ee;font-weight:600}
-  .tab-on{background:#1d2b4f;color:#fff}
-  .btn{padding:8px 14px;border-radius:6px;font-weight:600;border:1px solid #1d2b4f}
-  .btn:focus-visible,input:focus-visible{outline:2px solid #c9a227;outline-offset:2px}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Mobile Payroll Register</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* Mobile Touch Tweaks */
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
+    .tap-highlight-transparent { -webkit-tap-highlight-color: transparent; }
+  </style>
 </head>
-<body>
-<header class="bg-white border-b border-slate-300 sticky top-0 z-20">
-  <div class="max-w-7xl mx-auto px-3 py-2 flex flex-wrap items-center gap-2 justify-between">
-    <h1 class="text-lg font-bold">Payroll Register</h1>
-    <nav class="flex gap-1" id="tabs">
-      <button class="btn tab-on" data-tab="entry">Daily Entry</button>
-      <button class="btn" data-tab="rates">Rates</button>
-      <button class="btn" data-tab="summary">Summary</button>
-    </nav>
+<body class="bg-slate-100 text-slate-800 font-sans pb-24 select-none">
+
+  <!-- TOP APP BAR -->
+  <header class="bg-indigo-900 text-white sticky top-0 z-30 shadow-md">
+    <div class="px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <i class="fa-solid fa-users-gear text-indigo-400 text-lg"></i>
+        <h1 class="font-bold text-base tracking-wide">Daily Payroll</h1>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <input type="date" id="selectedDate" onchange="changeDate()" 
+               class="bg-indigo-950 text-indigo-100 text-xs font-semibold px-2 py-1.5 rounded-lg border border-indigo-700 outline-none">
+      </div>
+    </div>
+
+    <!-- SUMMARY PILL -->
+    <div class="bg-indigo-800/80 px-4 py-2 flex justify-between items-center text-xs border-t border-indigo-700">
+      <span>Daily Total: <strong id="headerDayTotal" class="text-emerald-300 text-sm">₹0.00</strong></span>
+      <span id="activeWorkersCount" class="text-indigo-200">0 Active Workers</span>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT CONTAINER -->
+  <main class="p-3 max-w-lg mx-auto">
+
+    <!-- VIEW 1: DAILY CARDS (MOBILE FIRST) -->
+    <section id="view-entry" class="space-y-3">
+      <div id="workersCardList" class="space-y-2.5">
+        <!-- Injected via JS -->
+      </div>
+    </section>
+
+    <!-- VIEW 2: MONTHLY SUMMARY -->
+    <section id="view-summary" class="hidden space-y-4">
+      <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div>
+            <label class="text-slate-500 font-medium">From Date:</label>
+            <input type="date" id="sumFromDate" class="w-full mt-1 border border-slate-300 rounded p-1.5 font-medium">
+          </div>
+          <div>
+            <label class="text-slate-500 font-medium">To Date:</label>
+            <input type="date" id="sumToDate" class="w-full mt-1 border border-slate-300 rounded p-1.5 font-medium">
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="renderMonthlySummary()" class="flex-1 bg-indigo-600 text-white font-medium text-xs py-2 rounded-lg shadow">
+            Filter Report
+          </button>
+          <button onclick="exportCSV()" class="bg-emerald-600 text-white px-3 py-2 rounded-lg text-xs font-medium">
+            <i class="fa-solid fa-file-excel mr-1"></i> CSV
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 text-center">
+        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+          <div class="text-[11px] text-slate-400 font-bold uppercase">Total Payout</div>
+          <div class="text-lg font-black text-indigo-700 mt-0.5" id="sumTotalPayout">₹0</div>
+        </div>
+        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+          <div class="text-[11px] text-slate-400 font-bold uppercase">Total Roj (Days)</div>
+          <div class="text-lg font-black text-emerald-600 mt-0.5" id="sumTotalRoj">0</div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+        <div class="p-3 border-b border-slate-100 font-bold text-xs text-slate-700 flex justify-between">
+          <span>Worker Breakdown</span>
+          <span>Net Amount</span>
+        </div>
+        <div id="summaryList" class="divide-y divide-slate-100 text-xs">
+          <!-- Injected via JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 3: RATE SETTINGS -->
+    <section id="view-rates" class="hidden">
+      <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-3">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+          <h2 class="font-bold text-sm">Item Master Rates (₹)</h2>
+          <button onclick="saveRatesFromUI()" class="bg-emerald-600 text-white px-3 py-1 text-xs rounded-lg font-medium">
+            Save Rates
+          </button>
+        </div>
+        <div class="space-y-2 text-xs" id="ratesInputsList">
+          <!-- Injected via JS -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL: WORKER ENTRY POPUP SHEET (MOBILE MODAL) -->
+  <div id="workerEntryModal" class="fixed inset-0 bg-black/60 z-50 hidden flex flex-col justify-end">
+    <div class="bg-white rounded-t-2xl max-h-[88vh] flex flex-col overflow-hidden shadow-2xl animate-in slide-in-from-bottom duration-200">
+      
+      <!-- MODAL HEADER -->
+      <div class="p-3.5 bg-indigo-900 text-white flex items-center justify-between">
+        <div>
+          <span class="text-[10px] text-indigo-300 uppercase tracking-wider font-semibold">Worker Entry</span>
+          <h3 class="font-bold text-base leading-tight" id="modalWorkerName">WORKER NAME</h3>
+        </div>
+        <div class="text-right">
+          <div class="text-[10px] text-indigo-300 font-semibold">Total ₹</div>
+          <div class="text-base font-black text-emerald-300" id="modalRunningTotal">₹0.00</div>
+        </div>
+      </div>
+
+      <!-- MODAL SCROLLABLE WORK ITEMS -->
+      <div class="p-3 overflow-y-auto space-y-2.5 flex-1" id="modalItemsList">
+        <!-- 13 Work Items Injected via JS -->
+      </div>
+
+      <!-- MODAL FOOTER -->
+      <div class="p-3 bg-slate-50 border-t border-slate-200 flex gap-2">
+        <button onclick="closeWorkerModal()" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition">
+          Close
+        </button>
+        <button onclick="saveCurrentWorkerModal()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md transition">
+          Save & Done
+        </button>
+      </div>
+
+    </div>
   </div>
-</header>
 
-<main class="max-w-7xl mx-auto px-3 py-3">
-  <!-- ENTRY -->
-  <section id="entry">
-    <div class="flex flex-wrap items-center gap-2 mb-3">
-      <button class="btn bg-white" id="prevDay" aria-label="Previous day">&larr;</button>
-      <input type="date" id="entryDate" class="border border-slate-400 rounded px-2 py-2 bg-white">
-      <button class="btn bg-white" id="nextDay" aria-label="Next day">&rarr;</button>
-      <button class="btn bg-white" id="today">Today</button>
-      <div class="ml-auto text-right">
-        <div class="text-xs text-slate-600">Day total</div>
-        <div class="text-xl font-bold" id="dayTotal">₹0.00</div>
-      </div>
-    </div>
-    <div id="rateNote" class="hidden mb-2 text-sm bg-amber-50 border border-amber-300 rounded px-3 py-2">
-      This day uses older rates. <button id="applyRates" class="underline font-semibold">Use current rates for this day</button>
-    </div>
-    <div class="grid-wrap rounded"><table class="reg" id="grid"></table></div>
-    <p class="text-xs text-slate-600 mt-2">Enter quantity per item. For DAY (Roj) use 1 for a full day, 0.5 for half. Entries save automatically.</p>
-  </section>
+  <!-- BOTTOM MOBILE NAVIGATION BAR -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around py-2 px-1 z-40 text-[11px] shadow-lg">
+    <button onclick="switchView('entry')" id="nav-entry" class="flex-1 flex flex-col items-center py-1 text-indigo-600 font-bold">
+      <i class="fa-solid fa-list-check text-base mb-0.5"></i> Daily Entry
+    </button>
+    <button onclick="switchView('summary')" id="nav-summary" class="flex-1 flex flex-col items-center py-1 text-slate-400 font-medium">
+      <i class="fa-solid fa-chart-simple text-base mb-0.5"></i> Report
+    </button>
+    <button onclick="switchView('rates')" id="nav-rates" class="flex-1 flex flex-col items-center py-1 text-slate-400 font-medium">
+      <i class="fa-solid fa-sliders text-base mb-0.5"></i> Rates
+    </button>
+  </nav>
 
-  <!-- RATES -->
-  <section id="rates" class="hidden">
-    <div class="bg-white border border-slate-300 rounded p-4 max-w-2xl">
-      <h2 class="font-bold text-lg mb-1">Master rates</h2>
-      <p class="text-sm text-slate-600 mb-3">New rates apply to days entered from now on. Days that already have entries keep the rates they were entered with.</p>
-      <div id="rateList" class="divide-y divide-slate-200"></div>
-      <div class="flex flex-wrap gap-2 mt-4">
-        <button class="btn bg-white" id="resetRates">Reset to defaults</button>
-      </div>
-    </div>
-    <div class="bg-white border border-slate-300 rounded p-4 max-w-2xl mt-4">
-      <h2 class="font-bold text-lg mb-1">Backup</h2>
-      <p class="text-sm text-slate-600 mb-3">Data lives in this browser only. Download a backup to keep it safe or to move it to another device.</p>
-      <div class="flex flex-wrap gap-2">
-        <button class="btn bg-white" id="backup">Download backup</button>
-        <label class="btn bg-white cursor-pointer">Restore backup<input type="file" id="restore" accept=".json" class="hidden"></label>
-      </div>
-    </div>
-  </section>
+  <script>
+    // 1. WORKERS LIST
+    const WORKERS = [
+      "LALO", "JAYESH", "NATU P", "HITESH", "KANU", "MAHESH C", 
+      "NATUBHAI", "RAMSINGH", "SHAILESH", "KABO", "MAHESH", 
+      "RAJU", "BHARAT", "NILESH", "AMIT", "VIJAY"
+    ];
 
-  <!-- SUMMARY -->
-  <section id="summary" class="hidden">
-    <div class="flex flex-wrap items-end gap-2 mb-3">
-      <label class="text-sm">From<br><input type="date" id="from" class="border border-slate-400 rounded px-2 py-2 bg-white"></label>
-      <label class="text-sm">To<br><input type="date" id="to" class="border border-slate-400 rounded px-2 py-2 bg-white"></label>
-      <button class="btn bg-white" id="thisMonth">This month</button>
-      <button class="btn bg-white" id="lastMonth">Last month</button>
-      <button class="btn bg-[#1d2b4f] text-white ml-auto" id="export">Export CSV / Excel</button>
-    </div>
-    <div class="grid-wrap rounded"><table class="reg" id="sumGrid"></table></div>
-  </section>
-</main>
+    // 2. WORK ITEMS IN YOUR EXACT ORDER
+    const WORK_ITEMS = [
+      { id: "aatho_n", name: "Aatho N", rate: 135.00, step: 1 },
+      { id: "aatho_b", name: "Aatho B", rate: 135.00, step: 1 },
+      { id: "aatho_s", name: "Aatho S", rate: 290.00, step: 1 },
+      { id: "roj", name: "Roj", rate: 270.00, step: 0.5 },
+      { id: "bag_20k_patti", name: "20 kg Bag Patti", rate: 19.00, step: 1 },
+      { id: "bag_20k_pouch", name: "20 kg Bag Pouch", rate: 18.00, step: 1 },
+      { id: "bandha_5", name: "5/- Bandha", rate: 25.00, step: 1 },
+      { id: "pouch_5", name: "5/- Pouch Bag", rate: 17.00, step: 1 },
+      { id: "bandha_10", name: "10/- Bandha", rate: 32.00, step: 1 },
+      { id: "pouch_10", name: "10/- Pouch Bag", rate: 17.00, step: 1 },
+      { id: "bundle_40k", name: "40 kg Bundle", rate: 60.00, step: 1 },
+      { id: "box", name: "Box", rate: 125.00, step: 1 },
+      { id: "ghoda", name: "Ghoda", rate: 60.00, step: 1 }
+    ];
 
-<script>
-const WORKERS=["LALO","JAYESH","NATU P","HITESH","KANU","MAHESH C","NATUBHAI","RAMSINGH","SHAILESH","KABO","MAHESH","RAJU","BHARAT","NILESH","AMIT","VIJAY"];
-const ITEMS=[
- ["p20","20KG BAGS - PATTI",19],["q20","20KG BAGS - POUCH",18],["b40","40KG BUNDEL",60],
- ["ab","AATHO B",135],["an","AATHO N",135],["as","AATHO S",290],
- ["b5","BANDHA - 5/-",25],["box","BOX",125],["day","DAY (Roj)",270],
- ["gh","GHODA BAGS",60],["pb5","POUCH BAGS - 5/-",17],["b10","BANDHA - 10/-",32],["pb10","POUCH BAGS - 10/-",17]
-].map(([id,name,rate])=>({id,name,rate}));
-const DEFAULT_RATES=Object.fromEntries(ITEMS.map(i=>[i.id,i.rate]));
-const K_RATES="payroll_rates_v1",K_DATA="payroll_data_v1";
+    let itemRates = {};
+    let records = {}; // { date: { worker: { itemId: count } } }
+    let activeWorker = null;
 
-const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k));return v||f}catch(e){return f}};
-let rates={...DEFAULT_RATES,...load(K_RATES,{})};
-let data=load(K_DATA,{});          // {date:{r:{itemId:rate}, w:{worker:{itemId:qty}}}}
-const save=()=>{try{localStorage.setItem(K_RATES,JSON.stringify(rates));localStorage.setItem(K_DATA,JSON.stringify(data))}catch(e){alert("Could not save: browser storage is full or blocked.")}};
+    window.addEventListener("DOMContentLoaded", () => {
+      initStorage();
 
-const $=s=>document.querySelector(s);
-const fmt=n=>"₹"+(+n).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2});
-const iso=d=>{const z=new Date(d.getTime()-d.getTimezoneOffset()*6e4);return z.toISOString().slice(0,10)};
-const shift=(s,n)=>{const d=new Date(s+"T00:00:00");d.setDate(d.getDate()+n);return iso(d)};
-const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const dayRates=d=>(data[d]&&data[d].r)||rates;
-const workerTotal=(d,w)=>{const q=data[d]?.w?.[w]||{},r=dayRates(d);return ITEMS.reduce((s,i)=>s+(+q[i.id]||0)*(+r[i.id]||0),0)};
-let curDate=iso(new Date());
+      const today = new Date().toISOString().split("T")[0];
+      document.getElementById("selectedDate").value = today;
 
-/* Tabs */
-document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{
-  document.querySelectorAll("#tabs button").forEach(x=>x.classList.toggle("tab-on",x===b));
-  ["entry","rates","summary"].forEach(t=>$("#"+t).classList.toggle("hidden",t!==b.dataset.tab));
-  if(b.dataset.tab==="summary")renderSummary();
-  if(b.dataset.tab==="rates")renderRates();
-});
+      const now = new Date();
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
+      document.getElementById("sumFromDate").value = firstDay;
+      document.getElementById("sumToDate").value = today;
 
-/* Entry grid */
-function renderEntry(){
-  $("#entryDate").value=curDate;
-  const d=data[curDate];
-  let h="<thead><tr><th class='sticky-l'>Worker</th>"+ITEMS.map(i=>`<th>${esc(i.name)}<br><span class="font-normal text-slate-600">${(+dayRates(curDate)[i.id]).toFixed(2)}</span></th>`).join("")+"<th class='sticky-r'>Total ₹</th></tr></thead><tbody>";
-  WORKERS.forEach((w,wi)=>{
-    h+=`<tr><td class="sticky-l">${esc(w)}</td>`+ITEMS.map(i=>{
-      const v=d?.w?.[w]?.[i.id];
-      return `<td><input class="q" type="number" inputmode="decimal" step="any" min="0" placeholder=" " data-w="${wi}" data-i="${i.id}" value="${v??""}"></td>`;
-    }).join("")+`<td class="sticky-r" id="rt${wi}">${fmt(workerTotal(curDate,w))}</td></tr>`;
-  });
-  h+="</tbody><tfoot><tr><td class='sticky-l'>Total</td>"+ITEMS.map(i=>`<td id="ft_${i.id}"></td>`).join("")+"<td class='sticky-r' id='ftAll'></td></tr></tfoot>";
-  $("#grid").innerHTML=h;
-  updateFoot();
-  const old=d&&d.r&&ITEMS.some(i=>+d.r[i.id]!==+rates[i.id]);
-  $("#rateNote").classList.toggle("hidden",!old);
-}
-function updateFoot(){
-  const d=data[curDate];let all=0;
-  ITEMS.forEach(i=>{let s=0;WORKERS.forEach(w=>s+=+(d?.w?.[w]?.[i.id])||0);$("#ft_"+i.id).textContent=s?+s.toFixed(2):""});
-  WORKERS.forEach(w=>all+=workerTotal(curDate,w));
-  $("#ftAll").textContent=fmt(all);$("#dayTotal").textContent=fmt(all);
-}
-$("#grid").addEventListener("input",e=>{
-  const t=e.target;if(!t.classList.contains("q"))return;
-  const w=WORKERS[+t.dataset.w],i=t.dataset.i,v=t.value;
-  if(v===""||+v===0){
-    if(data[curDate]?.w?.[w]){delete data[curDate].w[w][i];if(!Object.keys(data[curDate].w[w]).length)delete data[curDate].w[w];
-      if(!Object.keys(data[curDate].w).length)delete data[curDate]}
-  }else{
-    if(+v<0){t.value="";return}
-    if(!data[curDate])data[curDate]={r:{...rates},w:{}};
-    (data[curDate].w[w]??={})[i]=+v;
-  }
-  save();
-  $("#rt"+t.dataset.w).textContent=fmt(workerTotal(curDate,w));
-  updateFoot();
-});
-function setDate(s){if(!s)return;curDate=s;renderEntry()}
-$("#entryDate").onchange=e=>setDate(e.target.value);
-$("#prevDay").onclick=()=>setDate(shift(curDate,-1));
-$("#nextDay").onclick=()=>setDate(shift(curDate,1));
-$("#today").onclick=()=>setDate(iso(new Date()));
-$("#applyRates").onclick=()=>{data[curDate].r={...rates};save();renderEntry()};
+      renderWorkerCards();
+      renderRatesUI();
+      updateDayHeaderSummary();
+    });
 
-/* Rates */
-function renderRates(){
-  $("#rateList").innerHTML=ITEMS.map(i=>`<label class="flex items-center justify-between py-2 gap-3"><span class="font-medium">${esc(i.name)}</span>
-    <input type="number" step="0.01" min="0" data-r="${i.id}" value="${(+rates[i.id]).toFixed(2)}" class="w-28 border border-slate-400 rounded px-2 py-1 text-right"></label>`).join("");
-}
-$("#rateList").addEventListener("change",e=>{
-  const id=e.target.dataset.r;if(!id)return;
-  const v=parseFloat(e.target.value);
-  if(isNaN(v)||v<0){e.target.value=(+rates[id]).toFixed(2);return}
-  rates[id]=v;save();renderEntry();
-});
-$("#resetRates").onclick=()=>{if(confirm("Reset all rates to the original defaults? Past days are not changed.")){rates={...DEFAULT_RATES};save();renderRates();renderEntry()}};
-$("#backup").onclick=()=>download("payroll_backup_"+iso(new Date())+".json",JSON.stringify({rates,data}),"application/json");
-$("#restore").onchange=e=>{
-  const f=e.target.files[0];if(!f)return;
-  const r=new FileReader();
-  r.onload=()=>{try{const o=JSON.parse(r.result);if(!o.rates||!o.data)throw 0;
-    if(!confirm("Replace all data on this device with the backup?"))return;
-    rates={...DEFAULT_RATES,...o.rates};data=o.data;save();renderRates();renderEntry()}catch(x){alert("This file is not a valid payroll backup.")}};
-  r.readAsText(f);e.target.value="";
-};
+    function initStorage() {
+      const savedRates = localStorage.getItem("mob_payroll_rates");
+      if (savedRates) {
+        itemRates = JSON.parse(savedRates);
+      } else {
+        itemRates = {};
+        WORK_ITEMS.forEach(it => { itemRates[it.id] = it.rate; });
+        localStorage.setItem("mob_payroll_rates", JSON.stringify(itemRates));
+      }
 
-/* Summary */
-function summaryRows(){
-  const from=$("#from").value,to=$("#to").value;
-  const rows=WORKERS.map(w=>({w,q:Object.fromEntries(ITEMS.map(i=>[i.id,0])),t:0}));
-  Object.keys(data).filter(d=>(!from||d>=from)&&(!to||d<=to)).forEach(d=>{
-    const r=dayRates(d);
-    rows.forEach(row=>{const q=data[d].w[row.w]||{};ITEMS.forEach(i=>{const n=+q[i.id]||0;row.q[i.id]+=n;row.t+=n*(+r[i.id]||0)})});
-  });
-  return rows;
-}
-function renderSummary(){
-  const rows=summaryRows();
-  let h="<thead><tr><th class='sticky-l'>Worker</th>"+ITEMS.map(i=>`<th>${esc(i.name)}</th>`).join("")+"<th class='sticky-r'>Earnings ₹</th></tr></thead><tbody>";
-  rows.forEach(r=>{h+=`<tr><td class="sticky-l py-2">${esc(r.w)}</td>`+ITEMS.map(i=>`<td class="text-center px-2 py-2">${r.q[i.id]?+r.q[i.id].toFixed(2):""}</td>`).join("")+`<td class="sticky-r py-2">${fmt(r.t)}</td></tr>`});
-  h+="</tbody><tfoot><tr><td class='sticky-l'>Total</td>"+ITEMS.map(i=>{const s=rows.reduce((a,r)=>a+r.q[i.id],0);return `<td>${s?+s.toFixed(2):""}</td>`}).join("")+`<td class='sticky-r'>${fmt(rows.reduce((a,r)=>a+r.t,0))}</td></tr></tfoot>`;
-  $("#sumGrid").innerHTML=h;
-}
-function setRange(a,b){$("#from").value=a;$("#to").value=b;renderSummary()}
-$("#thisMonth").onclick=()=>{const n=new Date();setRange(iso(new Date(n.getFullYear(),n.getMonth(),1)),iso(new Date(n.getFullYear(),n.getMonth()+1,0)))};
-$("#lastMonth").onclick=()=>{const n=new Date();setRange(iso(new Date(n.getFullYear(),n.getMonth()-1,1)),iso(new Date(n.getFullYear(),n.getMonth(),0)))};
-$("#from").onchange=$("#to").onchange=renderSummary;
+      const savedRecords = localStorage.getItem("mob_payroll_records");
+      if (savedRecords) records = JSON.parse(savedRecords);
+    }
 
-function download(name,text,type){
-  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;
-  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-}
-$("#export").onclick=()=>{
-  const rows=summaryRows(),q=s=>'"'+String(s).replace(/"/g,'""')+'"';
-  const lines=[["Worker",...ITEMS.map(i=>i.name),"Earnings"].map(q).join(",")];
-  rows.forEach(r=>lines.push([q(r.w),...ITEMS.map(i=>+r.q[i.id].toFixed(2)),r.t.toFixed(2)].join(",")));
-  lines.push([q("TOTAL"),...ITEMS.map(i=>+rows.reduce((a,r)=>a+r.q[i.id],0).toFixed(2)),rows.reduce((a,r)=>a+r.t,0).toFixed(2)].join(","));
-  download(`payroll_${$("#from").value||"start"}_to_${$("#to").value||"end"}.csv`,"\ufeff"+lines.join("\r\n"),"text/csv;charset=utf-8");
-};
+    function saveRecords() {
+      localStorage.setItem("mob_payroll_records", JSON.stringify(records));
+      updateDayHeaderSummary();
+    }
 
-/* Init */
-(()=>{const n=new Date();$("#from").value=iso(new Date(n.getFullYear(),n.getMonth(),1));$("#to").value=iso(new Date(n.getFullYear(),n.getMonth()+1,0))})();
-renderEntry();
-</script>
-</body>
-</html>
+    function changeDate() {
+      renderWorkerCards();
+      updateDayHeaderSummary();
+    }
+
+    // WORKER LIST CARDS
+    function renderWorkerCards() {
+      const dt = document.getElementById("selectedDate").value;
+      const dayData = records[dt] || {};
+      const list = document.getElementById("workersCardList");
+      list.innerHTML = "";
+
+      WORKERS.forEach((w, index) => {
+        const wData = dayData[w] || {};
+        let totalWage = 0;
+        let summaryItems = [];
+
+        WORK_ITEMS.forEach(item => {
+          const qty = wData[item.id] || 0;
+          if (qty > 0) {
+            totalWage += (qty * (itemRates[item.id] || 0));
+            summaryItems.push(`${item.name}: ${qty}`);
+          }
+        });
+
+        const hasEntry = summaryItems.length > 0;
+
+        const card = document.createElement("div");
+        card.className = `p-3 rounded-xl border flex items-center justify-between transition active:scale-[0.99] cursor-pointer ${
+          hasEntry ? "bg-white border-indigo-200 shadow-sm" : "bg-slate-50 border-slate-200 text-slate-400"
+        }`;
+        card.onclick = () => openWorkerModal(w);
+
+        card.innerHTML = `
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${
+              hasEntry ? "bg-indigo-100 text-indigo-700" : "bg-slate-200 text-slate-500"
+            }">
+              ${index + 1}
+            </div>
+            <div>
+              <div class="font-bold text-sm ${hasEntry ? "text-slate-800" : "text-slate-600"}">${w}</div>
+              <div class="text-[11px] text-slate-500 truncate max-w-[190px]">
+                ${hasEntry ? summaryItems.join(", ") : "કોઈ એન્ટ્રી નથી - ક્લિક કરો"}
+              </div>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="font-black text-sm ${hasEntry ? "text-indigo-700" : "text-slate-300"}">
+              ₹${totalWage.toFixed(2)}
+            </div>
+            <div class="text-[10px] text-indigo-500 font-semibold mt-0.5">
+              Edit <i class="fa-solid fa-angle-right"></i>
+            </div>
+          </div>
+        `;
+        list.appendChild(card);
+      });
+    }
+
+    // MODAL OPEN / CALC
+    function openWorkerModal(workerName) {
+      activeWorker = workerName;
+      document.getElementById("modalWorkerName").innerText = workerName;
+      const dt = document.getElementById("selectedDate").value;
+      const wData = (records[dt] && records[dt][workerName]) ? records[dt][workerName] : {};
+
+      const list = document.getElementById("modalItemsList");
+      list.innerHTML = "";
+
+      WORK_ITEMS.forEach(item => {
+        const currentQty = wData[item.id] || "";
+        const rate = itemRates[item.id] || 0;
+
+        const row = document.createElement("div");
+        row.className = "flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-200";
+        row.innerHTML = `
+          <div class="flex-1 pr-2">
+            <div class="font-bold text-xs text-slate-800">${item.name}</div>
+            <div class="text-[10px] text-slate-400">₹${rate.toFixed(2)}</div>
+          </div>
+
+          <div class="flex items-center gap-1.5">
+            <button type="button" onclick="adjustModalQty('${item.id}', -${item.step})" 
+                    class="w-8 h-8 rounded-lg bg-slate-200 text-slate-700 font-bold active:bg-slate-300 flex items-center justify-center">
+              -
+            </button>
+
+            <input type="number" step="${item.step}" min="0" id="modal-inp-${item.id}" value="${currentQty}" 
+                   placeholder="0" oninput="calcModalRunningTotal()"
+                   class="w-16 h-8 text-center font-bold text-xs border border-slate-300 rounded-lg bg-white outline-none focus:border-indigo-500">
+
+            <button type="button" onclick="adjustModalQty('${item.id}', ${item.step})" 
+                    class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 font-bold active:bg-indigo-200 flex items-center justify-center">
+              +
+            </button>
+          </div>
+        `;
+        list.appendChild(row);
+      });
+
+      calcModalRunningTotal();
+      document.getElementById("workerEntryModal").classList.remove("hidden");
+    }
+
+    function adjustModalQty(itemId, delta) {
+      const inp = document.getElementById(`modal-inp-${itemId}`);
+      let current = parseFloat(inp.value) || 0;
+      current = Math.max(0, current + delta);
+      inp.value = current === 0 ? "" : (delta % 1 === 0 ? current : current.toFixed(1));
+      calcModalRunningTotal();
+    }
+
+    function calcModalRunningTotal() {
+      let sum = 0;
+      WORK_ITEMS.forEach(item => {
+        const inp = document.getElementById(`modal-inp-${item.id}`);
+        const qty = parseFloat(inp?.value) || 0;
+        sum += qty * (itemRates[item.id] || 0);
+      });
+      document.getElementById("modalRunningTotal").innerText = `₹${sum.toFixed(2)}`;
+    }
+
+    function saveCurrentWorkerModal() {
+      const dt = document.getElementById("selectedDate").value;
+      if (!records[dt]) records[dt] = {};
+
+      let obj = {};
+      let hasData = false;
+
+      WORK_ITEMS.forEach(item => {
+        const inp = document.getElementById(`modal-inp-${item.id}`);
+        const qty = parseFloat(inp?.value) || 0;
+        if (qty > 0) {
+          obj[item.id] = qty;
+          hasData = true;
+        }
+      });
+
+      if (hasData) {
+        records[dt][activeWorker] = obj;
+      } else {
+        delete records[dt][activeWorker];
+      }
+
+      saveRecords();
+      closeWorkerModal();
+      renderWorkerCards();
+    }
+
+    function closeWorkerModal() {
+      document.getElementById("workerEntryModal").classList.add("hidden");
+      activeWorker = null;
+    }
+
+    function updateDayHeaderSummary() {
+      const dt = document.getElementById("selectedDate").value;
+      const dayData = records[dt] || {};
+      let total = 0;
+      let activeCount = 0;
+
+      for (const [w, items] of Object.entries(dayData)) {
+        let hasItem = false;
+        for (const [id, qty] of Object.entries(items)) {
+          if (qty > 0) {
+            total += (qty * (itemRates[id] || 0));
+            hasItem = true;
+          }
+        }
+        if (hasItem) activeCount++;
+      }
+
+      document.getElementById("headerDayTotal").innerText = `₹${total.toFixed(2)}`;
+      document.getElementById("activeWorkersCount").innerText = `${activeCount} / ${WORKERS.length} Active`;
+    }
+
+    // MONTHLY REPORT
+    function renderMonthlySummary() {
+      const from = document.getElementById("sumFromDate").value;
+      const to = document.getElementById("sumToDate").value;
+      let grandTotal = 0;
+      let totalRoj = 0;
+      let workerSummary = {};
+
+      WORKERS.forEach(w => workerSummary[w] = { total: 0, items: {} });
+
+      for (const [dt, dayData] of Object.entries(records)) {
+        if (dt >= from && dt <= to) {
+          for (const [w, items] of Object.entries(dayData)) {
+            if (workerSummary[w]) {
+              for (const [itemId, qty] of Object.entries(items)) {
+                const amt = qty * (itemRates[itemId] || 0);
+                workerSummary[w].total
