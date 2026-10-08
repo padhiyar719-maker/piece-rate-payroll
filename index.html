@@ -1,135 +1,379 @@
 <!DOCTYPE html>
-<html lang="gu">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Daily Payroll</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    input[type=number]::-webkit-inner-spin-button, 
-    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-    input[type=number] { -moz-appearance: textfield; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1b1f4b">
+<title>Payroll</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+Bhai+2:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root{--ind:#1b1f4b;--mad:#b3265c;--mus:#f2b134;--mist:#f0eff6;--grn:#1f8a5b}
+  body{background:var(--mist);color:var(--ind);font-family:"Baloo Bhai 2",ui-sans-serif,system-ui,sans-serif;padding-bottom:84px}
+  /* bandhani dot pattern */
+  .bandhani{background-color:var(--ind);background-image:radial-gradient(circle,var(--mus) 2px,transparent 2.6px),radial-gradient(circle,#e86a9a 1.5px,transparent 2.1px);background-size:16px 16px;background-position:0 0,8px 8px}
+  .band-strip{height:12px}
+  .card{background:#fff;border-radius:18px;box-shadow:0 1px 0 #d9d7e8,0 6px 18px -10px rgba(27,31,75,.35)}
+  .btn{padding:8px 14px;border-radius:12px;font-weight:600;border:2px solid var(--ind);background:#fff;min-height:44px}
+  .btn:active{transform:scale(.97)}
+  .btn-dark{background:var(--ind);color:#fff}
+  .nav{position:fixed;bottom:0;left:0;right:0;z-index:30;background:var(--ind);padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));display:flex;gap:4px}
+  .nav button{flex:1;color:#cfd0ee;border-radius:12px;padding:6px 0;font-size:13px;font-weight:600;line-height:1.1}
+  .nav button svg{display:block;margin:0 auto 2px}
+  .nav button.on{background:var(--mus);color:var(--ind)}
+  .chip{display:inline-block;background:#e9f6ef;color:#14603f;border-radius:999px;padding:0 9px;font-size:12px;font-weight:600;margin:2px 3px 0 0}
+  .wcard{display:block;width:100%;text-align:left;padding:10px 14px}
+  .wcard.has{border-left:6px solid var(--grn)}
+  .wcard:not(.has){border-left:6px solid #d9d7e8}
+  /* sheet */
+  #sheet{position:fixed;inset:0;z-index:50;background:var(--mist);display:none;flex-direction:column}
+  #sheet.open{display:flex}
+  .irow{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#fff;border-bottom:1px solid #e3e1f0}
+  .irow.on{background:#effaf3}
+  .step{width:46px;height:46px;border-radius:14px;border:2px solid var(--ind);font-size:26px;font-weight:800;line-height:1;background:#fff}
+  .step.plus{background:var(--ind);color:#fff}
+  .step:active{transform:scale(.92)}
+  .qin{width:64px;height:46px;text-align:center;font-size:20px;font-weight:800;border:2px solid #cfcde6;border-radius:14px;background:#fff}
+  .qin:focus{outline:none;border-color:var(--mad);background:#fff7e0}
+  /* register grid */
+  .grid-wrap{overflow:auto;max-height:calc(100vh - 290px);border-radius:14px;background:#fff;box-shadow:0 1px 0 #d9d7e8}
+  table.reg{border-collapse:separate;border-spacing:0;width:100%;min-width:max-content}
+  table.reg th,table.reg td{border-right:1px solid #e3e1f0;border-bottom:1px solid #e3e1f0;padding:0}
+  table.reg thead th{position:sticky;top:0;background:var(--ind);color:#fff;z-index:3;padding:6px 8px;font-size:12px;line-height:1.15;text-align:center}
+  table.reg .sl{position:sticky;left:0;background:#f7f6fc;z-index:2;text-align:left;padding:0 10px;font-weight:700;white-space:nowrap}
+  table.reg thead .sl{background:var(--ind);z-index:4}
+  table.reg .sr{position:sticky;right:0;background:#fff4d6;z-index:2;text-align:right;padding:0 10px;font-weight:800;white-space:nowrap}
+  table.reg thead .sr{background:var(--mus);color:var(--ind);z-index:4}
+  table.reg tfoot td{position:sticky;bottom:0;background:#e3e1f0;font-weight:800;padding:6px 8px;text-align:center;z-index:3}
+  table.reg tfoot .sl,table.reg tfoot .sr{z-index:5}
+  .q{width:72px;height:42px;text-align:center;border:0;background:transparent;font-size:15px}
+  .q:focus{outline:none;background:#fff4d6;box-shadow:inset 0 0 0 2px var(--mad)}
+  .q:not(:placeholder-shown){background:#e9f6ef;font-weight:700}
+  input[type=date]{min-height:44px;border:2px solid var(--ind);border-radius:12px;padding:0 10px;background:#fff;font-family:inherit;font-weight:600}
+  .bar{height:10px;border-radius:6px;background:linear-gradient(90deg,var(--mad),var(--mus))}
+</style>
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans pb-24">
+<body>
 
-  <!-- TOP HEADER -->
-  <header class="bg-indigo-900 text-white sticky top-0 z-30 shadow-md">
-    <div class="px-4 py-3 flex items-center justify-between">
-      <div class="font-bold text-base tracking-wide flex items-center gap-2">
-        <span>📋</span> Daily Payroll
-      </div>
-      <div>
-        <input type="date" id="selectedDate" onchange="onDateChange()" 
-               class="bg-indigo-950 text-indigo-100 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-indigo-700 outline-none">
-      </div>
+<header class="bandhani">
+  <div class="px-4 pt-4 pb-3 flex items-center justify-between gap-3" style="background:linear-gradient(180deg,rgba(27,31,75,.92),rgba(27,31,75,.78))">
+    <div>
+      <div class="text-xs text-amber-200 font-semibold">Piece-rate payroll</div>
+      <h1 class="text-2xl font-extrabold text-white leading-none" id="title">Pagar Register</h1>
     </div>
-    <div class="bg-indigo-800 px-4 py-2 flex justify-between items-center text-xs border-t border-indigo-700">
-      <span>Daily Total: <strong id="headerDayTotal" class="text-emerald-300 text-sm">₹0.00</strong></span>
-      <span id="activeWorkersCount" class="text-indigo-200">0 Active Workers</span>
-    </div>
-  </header>
-
-  <!-- MAIN CONTAINER -->
-  <main class="p-3 max-w-lg mx-auto">
-
-    <!-- VIEW 1: DAILY CARDS -->
-    <section id="view-entry" class="space-y-2.5">
-      <div id="workersCardList" class="space-y-2.5">
-        <!-- Workers injected automatically via JS -->
-      </div>
-    </section>
-
-    <!-- VIEW 2: MONTHLY REPORT -->
-    <section id="view-summary" class="hidden space-y-3">
-      <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm space-y-3">
-        <div class="grid grid-cols-2 gap-2 text-xs">
-          <div>
-            <label class="text-slate-500 font-medium">From:</label>
-            <input type="date" id="sumFromDate" class="w-full mt-1 border border-slate-300 rounded p-1.5 font-medium">
-          </div>
-          <div>
-            <label class="text-slate-500 font-medium">To:</label>
-            <input type="date" id="sumToDate" class="w-full mt-1 border border-slate-300 rounded p-1.5 font-medium">
-          </div>
-        </div>
-        <div class="flex gap-2">
-          <button onclick="renderMonthlySummary()" class="flex-1 bg-indigo-600 text-white font-medium text-xs py-2 rounded-lg shadow">
-            Filter Report
-          </button>
-          <button onclick="exportCSV()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-xs font-medium">
-            Export CSV
-          </button>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-2 gap-2 text-center">
-        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-          <div class="text-[10px] text-slate-400 font-bold uppercase">Total Payout</div>
-          <div class="text-lg font-black text-indigo-700 mt-0.5" id="sumTotalPayout">₹0.00</div>
-        </div>
-        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-          <div class="text-[10px] text-slate-400 font-bold uppercase">Total Roj (Days)</div>
-          <div class="text-lg font-black text-emerald-600 mt-0.5" id="sumTotalRoj">0</div>
-        </div>
-      </div>
-
-      <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-        <div class="p-3 border-b border-slate-100 font-bold text-xs text-slate-700 flex justify-between bg-slate-50">
-          <span>Worker Name</span>
-          <span>Total (₹)</span>
-        </div>
-        <div id="summaryList" class="divide-y divide-slate-100 text-xs"></div>
-      </div>
-    </section>
-
-    <!-- VIEW 3: RATE MASTER -->
-    <section id="view-rates" class="hidden">
-      <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-3">
-        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
-          <div>
-            <h2 class="font-bold text-sm">Item Rates (₹)</h2>
-            <p class="text-[10px] text-slate-400">રેટ બદલવા માટે કિંમત લખી સેવ કરો.</p>
-          </div>
-          <button onclick="saveRatesFromUI()" class="bg-emerald-600 text-white px-3 py-1.5 text-xs rounded-lg font-bold shadow">
-            Save Rates
-          </button>
-        </div>
-        <div class="space-y-2 text-xs" id="ratesInputsList"></div>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- MODAL: WORKER ENTRY (BOTTOM POPUP) -->
-  <div id="workerEntryModal" class="fixed inset-0 bg-black/60 z-50 hidden flex flex-col justify-end">
-    <div class="bg-white rounded-t-2xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl">
-      
-      <div class="p-3.5 bg-indigo-900 text-white flex items-center justify-between">
-        <div>
-          <span class="text-[10px] text-indigo-300 uppercase font-semibold">Worker</span>
-          <h3 class="font-bold text-base leading-tight" id="modalWorkerName">WORKER</h3>
-        </div>
-        <div class="text-right">
-          <div class="text-[10px] text-indigo-300 font-semibold">Total ₹</div>
-          <div class="text-base font-black text-emerald-300" id="modalRunningTotal">₹0.00</div>
-        </div>
-      </div>
-
-      <div class="p-3 overflow-y-auto space-y-2 flex-1" id="modalItemsList"></div>
-
-      <div class="p-3 bg-slate-50 border-t border-slate-200 flex gap-2">
-        <button onclick="closeWorkerModal()" class="flex-1 bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs">
-          Cancel
-        </button>
-        <button onclick="saveCurrentWorkerModal()" class="flex-1 bg-emerald-600 text-white font-bold py-2.5 rounded-xl text-xs shadow">
-          Save Entry
-        </button>
-      </div>
-
+    <div class="text-right">
+      <div class="text-xs text-amber-200 font-semibold" id="hdLabel">Aaj nu kul</div>
+      <div class="text-2xl font-extrabold text-white leading-none" id="hdTotal">₹0</div>
     </div>
   </div>
+  <div class="band-strip" style="background:var(--mus)"></div>
+</header>
 
-  <!-- BOTTOM NAVIGATION -->
-  <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around py-2 z-40 text-xs shadow-lg">
-    <button onclick="switchView('entry')" id
+<main class="max-w-6xl mx-auto px-3 py-3">
+
+  <!-- ENTRY -->
+  <section id="entry">
+    <div class="flex items-center gap-2 mb-3">
+      <button class="btn" id="prevDay" aria-label="Previous day">&larr;</button>
+      <input type="date" id="entryDate" class="flex-1 min-w-0">
+      <button class="btn" id="nextDay" aria-label="Next day">&rarr;</button>
+    </div>
+    <div class="flex items-center gap-2 mb-3">
+      <button class="btn btn-dark" id="vList">Worker list</button>
+      <button class="btn" id="vGrid">Register</button>
+      <button class="btn ml-auto" id="today">Aaj</button>
+    </div>
+    <div id="rateNote" class="hidden mb-3 text-sm bg-amber-50 border-2 border-amber-300 rounded-xl px-3 py-2">
+      Aa divas junа rate thi chhe. <button id="applyRates" class="underline font-bold">Have na rate lagavo</button>
+    </div>
+    <div id="listView" class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3"></div>
+    <div id="gridView" class="hidden grid-wrap"><table class="reg" id="grid"></table></div>
+  </section>
+
+  <!-- DASHBOARD -->
+  <section id="dash" class="hidden space-y-3"></section>
+
+  <!-- SUMMARY -->
+  <section id="summary" class="hidden">
+    <div class="grid grid-cols-2 gap-2 mb-2">
+      <label class="text-sm font-semibold">From<input type="date" id="from" class="w-full"></label>
+      <label class="text-sm font-semibold">To<input type="date" id="to" class="w-full"></label>
+    </div>
+    <div class="flex gap-2 mb-3">
+      <button class="btn" id="thisMonth">Aa mahino</button>
+      <button class="btn" id="lastMonth">Gayo mahino</button>
+      <button class="btn btn-dark ml-auto" id="export">Excel / CSV</button>
+    </div>
+    <div class="grid-wrap"><table class="reg" id="sumGrid"></table></div>
+  </section>
+
+  <!-- RATES -->
+  <section id="rates" class="hidden space-y-3 max-w-xl">
+    <div class="card p-4">
+      <h2 class="font-extrabold text-lg">Master rates</h2>
+      <p class="text-sm text-slate-600 mb-2">Navo rate aaj thi lagshe. Jena divas ni entry thai gai chhe te junа rate par j rahese.</p>
+      <div id="rateList" class="divide-y divide-slate-200"></div>
+      <button class="btn mt-3" id="resetRates">Default rate pachha lavo</button>
+    </div>
+    <div class="card p-4">
+      <h2 class="font-extrabold text-lg">Backup</h2>
+      <p class="text-sm text-slate-600 mb-2">Data aa phone na browser ma j save thay chhe. Backup download kari rakho.</p>
+      <div class="flex gap-2 flex-wrap">
+        <button class="btn" id="backup">Backup download</button>
+        <label class="btn cursor-pointer">Backup restore<input type="file" id="restore" accept=".json" class="hidden"></label>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- WORKER ENTRY SHEET -->
+<div id="sheet" role="dialog" aria-modal="true">
+  <div class="bandhani"><div class="px-3 py-3 flex items-center gap-3" style="background:rgba(27,31,75,.85)">
+    <button class="btn" id="shClose" aria-label="Close">&larr;</button>
+    <div class="flex-1 min-w-0"><div class="text-xs text-amber-200" id="shDate"></div><div class="text-2xl font-extrabold text-white leading-none truncate" id="shName"></div></div>
+    <div class="text-right"><div class="text-xs text-amber-200">Kul</div><div class="text-2xl font-extrabold text-white leading-none" id="shTotal"></div></div>
+  </div></div>
+  <div id="shRows" class="flex-1 overflow-y-auto"></div>
+  <div class="p-3 flex gap-2" style="background:var(--ind);padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))">
+    <button class="btn flex-1" id="shPrev">&larr; Pachhal</button>
+    <button class="btn flex-1" id="shNext" style="background:var(--mus)">Aagal &rarr;</button>
+  </div>
+</div>
+
+<nav class="nav" id="nav">
+  <button class="on" data-tab="entry"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20h4L19 9l-4-4L4 16v4zM13 7l4 4"/></svg>Entry</button>
+  <button data-tab="dash"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>Dashboard</button>
+  <button data-tab="summary"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 4h14v16H5zM9 9h6M9 13h6M9 17h3"/></svg>Summary</button>
+  <button data-tab="rates"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 8h12M6 12h12M6 16h8M4 4h16v16H4z"/></svg>Rates</button>
+</nav>
+
+<script>
+const WORKERS=["LALO","JAYESH","NATU P","HITESH","KANU","MAHESH C","NATUBHAI","RAMSINGH","SHAILESH","KABO","MAHESH","RAJU","BHARAT","NILESH","AMIT","VIJAY"];
+/* Order as per paper register */
+const ITEMS=[
+ ["an","AATHO N",135,1],["ab","AATHO B",135,1],["as","AATHO S",290,1],["day","ROJ",270,.5],
+ ["p20","20 KG BAG PATTI",19,1],["q20","20 KG BAG POUCH",18,1],
+ ["b5","5/- BANDHA",25,1],["pb5","5/- POUCH BAG",17,1],
+ ["b10","10/- BANDHA",32,1],["pb10","10/- POUCH BAG",17,1],
+ ["b40","40 KG BUNDLE",60,1],["box","BOX",125,1],["gh","GHODA",60,1]
+].map(([id,name,rate,step])=>({id,name,rate,step}));
+const DEFAULT_RATES=Object.fromEntries(ITEMS.map(i=>[i.id,i.rate]));
+const K_RATES="payroll_rates_v1",K_DATA="payroll_data_v1";
+const load=(k,f)=>{try{return JSON.parse(localStorage.getItem(k))||f}catch(e){return f}};
+let rates={...DEFAULT_RATES,...load(K_RATES,{})};
+let data=load(K_DATA,{});   // {date:{r:{id:rate}, w:{worker:{id:qty}}}}
+const save=()=>{try{localStorage.setItem(K_RATES,JSON.stringify(rates));localStorage.setItem(K_DATA,JSON.stringify(data))}catch(e){alert("Save nathi thayu: browser storage bhari gayu chhe athva block chhe.")}};
+
+const $=s=>document.querySelector(s);
+const fmt=n=>"₹"+(+n).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmt0=n=>"₹"+Math.round(+n).toLocaleString("en-IN");
+const iso=d=>{const z=new Date(d.getTime()-d.getTimezoneOffset()*6e4);return z.toISOString().slice(0,10)};
+const shift=(s,n)=>{const d=new Date(s+"T00:00:00");d.setDate(d.getDate()+n);return iso(d)};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const nice=n=>+(+n).toFixed(2);
+const dayRates=d=>(data[d]&&data[d].r)||rates;
+const wTotal=(d,w)=>{const q=data[d]?.w?.[w]||{},r=dayRates(d);return ITEMS.reduce((s,i)=>s+(+q[i.id]||0)*(+r[i.id]||0),0)};
+const dayTotal=d=>WORKERS.reduce((s,w)=>s+wTotal(d,w),0);
+const prettyDate=s=>new Date(s+"T00:00:00").toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short",year:"numeric"});
+let curDate=iso(new Date()),view=window.innerWidth>=900?"grid":"list",tab="entry",shIdx=0;
+
+/* ---------- shared write ---------- */
+function setQty(w,i,v){
+  v=+v||0;
+  if(v<=0){
+    const d=data[curDate];
+    if(d?.w?.[w]){delete d.w[w][i];if(!Object.keys(d.w[w]).length)delete d.w[w];if(!Object.keys(d.w).length)delete data[curDate]}
+  }else{
+    if(!data[curDate])data[curDate]={r:{...rates},w:{}};
+    (data[curDate].w[w]??={})[i]=v;
+  }
+  save();
+}
+
+/* ---------- tabs ---------- */
+document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{tab=b.dataset.tab;showTab()});
+function showTab(){
+  document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("on",x.dataset.tab===tab));
+  ["entry","dash","summary","rates"].forEach(t=>$("#"+t).classList.toggle("hidden",t!==tab));
+  if(tab==="entry")renderEntry();
+  if(tab==="dash")renderDash();
+  if(tab==="summary")renderSummary();
+  if(tab==="rates")renderRates();
+  window.scrollTo(0,0);
+}
+function updateHeader(){
+  const t=tab==="entry"?curDate:iso(new Date());
+  $("#hdLabel").textContent=t===iso(new Date())?"Aaj nu kul":prettyDate(t);
+  $("#hdTotal").textContent=fmt0(dayTotal(t));
+}
+
+/* ---------- entry: list + grid ---------- */
+function renderEntry(){
+  $("#entryDate").value=curDate;
+  $("#vList").classList.toggle("btn-dark",view==="list");$("#vGrid").classList.toggle("btn-dark",view==="grid");
+  $("#listView").classList.toggle("hidden",view!=="list");$("#gridView").classList.toggle("hidden",view!=="grid");
+  const d=data[curDate];
+  const old=d&&d.r&&ITEMS.some(i=>+d.r[i.id]!==+rates[i.id]);
+  $("#rateNote").classList.toggle("hidden",!old);
+  if(view==="list")renderList();else renderGrid();
+  updateHeader();
+}
+function renderList(){
+  const r=dayRates(curDate);
+  $("#listView").innerHTML=WORKERS.map((w,wi)=>{
+    const q=data[curDate]?.w?.[w]||{},t=wTotal(curDate,w),has=t>0;
+    const chips=ITEMS.filter(i=>q[i.id]).map(i=>`<span class="chip">${esc(i.name)} × ${nice(q[i.id])}</span>`).join("");
+    return `<button class="card wcard ${has?"has":""}" data-wi="${wi}">
+      <div class="flex items-center justify-between"><span class="text-lg font-extrabold">${esc(w)}</span><span class="text-lg font-extrabold ${has?"":"text-slate-400"}">${has?fmt(t):"Entry karo"}</span></div>
+      ${chips?`<div class="leading-tight">${chips}</div>`:""}</button>`;
+  }).join("");
+}
+$("#listView").addEventListener("click",e=>{const b=e.target.closest("[data-wi]");if(b)openSheet(+b.dataset.wi)});
+
+function renderGrid(){
+  const r=dayRates(curDate),d=data[curDate];
+  let h="<thead><tr><th class='sl'>Worker</th>"+ITEMS.map(i=>`<th>${esc(i.name)}<br><span style="color:#f2b134">${(+r[i.id]).toFixed(2)}</span></th>`).join("")+"<th class='sr'>Total</th></tr></thead><tbody>";
+  WORKERS.forEach((w,wi)=>{
+    h+=`<tr><td class="sl">${esc(w)}</td>`+ITEMS.map(i=>`<td><input class="q" type="number" inputmode="decimal" step="any" min="0" placeholder=" " data-w="${wi}" data-i="${i.id}" value="${d?.w?.[w]?.[i.id]??""}"></td>`).join("")+`<td class="sr" id="rt${wi}">${fmt(wTotal(curDate,w))}</td></tr>`;
+  });
+  h+="</tbody><tfoot><tr><td class='sl'>Total</td>"+ITEMS.map(i=>`<td id="ft_${i.id}"></td>`).join("")+"<td class='sr' id='ftAll'></td></tr></tfoot>";
+  $("#grid").innerHTML=h;footGrid();
+}
+function footGrid(){
+  const d=data[curDate];
+  ITEMS.forEach(i=>{let s=0;WORKERS.forEach(w=>s+=+(d?.w?.[w]?.[i.id])||0);$("#ft_"+i.id).textContent=s?nice(s):""});
+  $("#ftAll").textContent=fmt(dayTotal(curDate));
+}
+$("#grid").addEventListener("input",e=>{
+  const t=e.target;if(!t.classList.contains("q"))return;
+  if(+t.value<0){t.value="";return}
+  const w=WORKERS[+t.dataset.w];setQty(w,t.dataset.i,t.value);
+  $("#rt"+t.dataset.w).textContent=fmt(wTotal(curDate,w));footGrid();updateHeader();
+});
+function setDate(s){if(!s)return;curDate=s;renderEntry()}
+$("#entryDate").onchange=e=>setDate(e.target.value);
+$("#prevDay").onclick=()=>setDate(shift(curDate,-1));
+$("#nextDay").onclick=()=>setDate(shift(curDate,1));
+$("#today").onclick=()=>setDate(iso(new Date()));
+$("#vList").onclick=()=>{view="list";renderEntry()};
+$("#vGrid").onclick=()=>{view="grid";renderEntry()};
+$("#applyRates").onclick=()=>{data[curDate].r={...rates};save();renderEntry()};
+
+/* ---------- worker sheet (mobile friendly) ---------- */
+function openSheet(wi){shIdx=wi;$("#sheet").classList.add("open");document.body.style.overflow="hidden";drawSheet()}
+function closeSheet(){$("#sheet").classList.remove("open");document.body.style.overflow="";renderEntry()}
+function drawSheet(){
+  const w=WORKERS[shIdx],r=dayRates(curDate),q=data[curDate]?.w?.[w]||{};
+  $("#shName").textContent=w;$("#shDate").textContent=prettyDate(curDate);
+  $("#shRows").innerHTML=ITEMS.map(i=>`<div class="irow ${q[i.id]?"on":""}" data-i="${i.id}">
+    <div class="flex-1 min-w-0"><div class="font-extrabold leading-tight">${esc(i.name)}</div>
+    <div class="text-sm text-slate-600 amt">${(+r[i.id]).toFixed(2)} × ${nice(q[i.id]||0)} = <b>${fmt((q[i.id]||0)*r[i.id])}</b></div></div>
+    <button class="step" data-d="-1" aria-label="Minus">−</button>
+    <input class="qin" type="number" inputmode="decimal" step="any" min="0" placeholder="0" value="${q[i.id]??""}">
+    <button class="step plus" data-d="1" aria-label="Plus">+</button></div>`).join("");
+  $("#shRows").scrollTop=0;shTotal();
+  $("#shPrev").style.opacity=shIdx?1:.4;$("#shNext").textContent=shIdx<WORKERS.length-1?"Aagal →":"Pati gayu ✓";
+}
+function shTotal(){$("#shTotal").textContent=fmt(wTotal(curDate,WORKERS[shIdx]))}
+function shUpdateRow(row,v){
+  const i=row.dataset.i,r=dayRates(curDate);
+  row.classList.toggle("on",v>0);
+  row.querySelector(".amt").innerHTML=`${(+r[i]).toFixed(2)} × ${nice(v)} = <b>${fmt(v*r[i])}</b>`;
+  setQty(WORKERS[shIdx],i,v);shTotal();
+}
+$("#shRows").addEventListener("click",e=>{
+  const b=e.target.closest(".step");if(!b)return;
+  const row=b.closest(".irow"),inp=row.querySelector(".qin"),it=ITEMS.find(x=>x.id===row.dataset.i);
+  const v=Math.max(0,Math.round(((+inp.value||0)+(+b.dataset.d)*it.step)*100)/100);
+  inp.value=v||"";shUpdateRow(row,v);
+});
+$("#shRows").addEventListener("input",e=>{
+  if(!e.target.classList.contains("qin"))return;
+  let v=+e.target.value;if(v<0||isNaN(v)){e.target.value="";v=0}
+  shUpdateRow(e.target.closest(".irow"),v);
+});
+$("#shRows").addEventListener("focusin",e=>{if(e.target.classList.contains("qin"))e.target.select()});
+$("#shClose").onclick=closeSheet;
+$("#shPrev").onclick=()=>{if(shIdx>0){shIdx--;drawSheet()}};
+$("#shNext").onclick=()=>{if(shIdx<WORKERS.length-1){shIdx++;drawSheet()}else closeSheet()};
+
+/* ---------- dashboard ---------- */
+function monthRange(off=0){const n=new Date();return[iso(new Date(n.getFullYear(),n.getMonth()+off,1)),iso(new Date(n.getFullYear(),n.getMonth()+off+1,0))]}
+function aggregate(from,to){
+  const rows=WORKERS.map(w=>({w,q:Object.fromEntries(ITEMS.map(i=>[i.id,0])),t:0}));
+  const items=Object.fromEntries(ITEMS.map(i=>[i.id,0]));let days=0;
+  Object.keys(data).filter(d=>(!from||d>=from)&&(!to||d<=to)).forEach(d=>{
+    days++;const r=dayRates(d);
+    rows.forEach(row=>{const q=data[d].w[row.w]||{};ITEMS.forEach(i=>{const n=+q[i.id]||0;row.q[i.id]+=n;row.t+=n*(+r[i.id]||0);items[i.id]+=n*(+r[i.id]||0)})});
+  });
+  return{rows,items,days};
+}
+function renderDash(){
+  const today=iso(new Date()),[a,b]=monthRange(0),agg=aggregate(a,b);
+  const total=agg.rows.reduce((s,r)=>s+r.t,0),ranked=[...agg.rows].filter(r=>r.t>0).sort((x,y)=>y.t-x.t);
+  const maxW=ranked[0]?.t||1,itemArr=ITEMS.map(i=>({n:i.name,v:agg.items[i.id]})).filter(x=>x.v>0).sort((x,y)=>y.v-x.v),maxI=itemArr[0]?.v||1;
+  const workedToday=WORKERS.filter(w=>wTotal(today,w)>0).length;
+  const days7=[...Array(7)].map((_,k)=>{const d=shift(today,k-6);return{d,v:dayTotal(d)}}),max7=Math.max(...days7.map(x=>x.v),1);
+  const mName=new Date().toLocaleDateString("en-IN",{month:"long",year:"numeric"});
+  $("#dash").innerHTML=`
+  <div class="card overflow-hidden"><div class="bandhani"><div class="p-4" style="background:rgba(27,31,75,.88)">
+    <div class="text-amber-200 text-sm font-semibold">${mName} no kul pagar</div>
+    <div class="text-4xl font-extrabold text-white leading-tight">${fmt(total)}</div>
+    <div class="text-sm text-pink-200">${agg.days} divas ni entry · ${ranked.length} karigar</div></div></div></div>
+  <div class="grid grid-cols-2 gap-3">
+    <div class="card p-3"><div class="text-sm text-slate-600">Aaj nu kul</div><div class="text-2xl font-extrabold">${fmt0(dayTotal(today))}</div><div class="text-sm" style="color:var(--grn)">${workedToday} karigar e kam karyu</div></div>
+    <div class="card p-3"><div class="text-sm text-slate-600">Top karigar</div><div class="text-2xl font-extrabold truncate">${ranked[0]?esc(ranked[0].w):"—"}</div><div class="text-sm" style="color:var(--mad)">${ranked[0]?fmt0(ranked[0].t):"Entry nathi"}</div></div>
+  </div>
+  <div class="card p-4"><h3 class="font-extrabold mb-2">Chhella 7 divas</h3>
+    <div class="flex items-end gap-2" style="height:120px">${days7.map(x=>`<div class="flex-1 flex flex-col items-center justify-end h-full"><div class="text-[10px] font-semibold">${x.v?Math.round(x.v/100)/10+"k":""}</div><div class="w-full rounded-t-lg" style="height:${Math.max(x.v/max7*88,x.v?4:2)}px;background:${x.d===today?"var(--mad)":"var(--ind)"};opacity:${x.v?1:.2}"></div><div class="text-[11px] mt-1">${new Date(x.d+"T00:00:00").toLocaleDateString("en-IN",{weekday:"short"}).slice(0,2)}</div></div>`).join("")}</div></div>
+  <div class="card p-4"><h3 class="font-extrabold mb-2">Karigar mujab (aa mahino)</h3>
+    ${ranked.length?ranked.map(r=>`<div class="mb-2"><div class="flex justify-between text-sm font-semibold"><span>${esc(r.w)}</span><span>${fmt0(r.t)}</span></div><div class="bar" style="width:${Math.max(r.t/maxW*100,3)}%"></div></div>`).join(""):`<p class="text-slate-500 text-sm">Haju koi entry nathi.</p>`}</div>
+  <div class="card p-4"><h3 class="font-extrabold mb-2">Kam mujab kamai (aa mahino)</h3>
+    ${itemArr.length?itemArr.map(x=>`<div class="mb-2"><div class="flex justify-between text-sm font-semibold"><span>${esc(x.n)}</span><span>${fmt0(x.v)}</span></div><div class="bar" style="width:${Math.max(x.v/maxI*100,3)}%;background:linear-gradient(90deg,var(--ind),#6a6fd1)"></div></div>`).join(""):`<p class="text-slate-500 text-sm">Haju koi entry nathi.</p>`}</div>`;
+}
+
+/* ---------- rates ---------- */
+function renderRates(){
+  $("#rateList").innerHTML=ITEMS.map(i=>`<label class="flex items-center justify-between py-2 gap-3"><span class="font-semibold">${esc(i.name)}</span>
+  <input type="number" inputmode="decimal" step="0.01" min="0" data-r="${i.id}" value="${(+rates[i.id]).toFixed(2)}" class="w-28 text-right border-2 rounded-xl px-2 py-2 font-bold" style="border-color:#cfcde6"></label>`).join("");
+}
+$("#rateList").addEventListener("change",e=>{
+  const id=e.target.dataset.r;if(!id)return;const v=parseFloat(e.target.value);
+  if(isNaN(v)||v<0){e.target.value=(+rates[id]).toFixed(2);return}
+  rates[id]=v;save();
+});
+$("#resetRates").onclick=()=>{if(confirm("Badha rate default par pachha jaay? Junа divas badlase nahi.")){rates={...DEFAULT_RATES};save();renderRates()}};
+function download(name,text,type){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+$("#backup").onclick=()=>download("payroll_backup_"+iso(new Date())+".json",JSON.stringify({rates,data}),"application/json");
+$("#restore").onchange=e=>{
+  const f=e.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=()=>{try{const o=JSON.parse(r.result);if(!o.rates||!o.data)throw 0;if(!confirm("Aa phone no badho data backup thi badli nakhvo?"))return;rates={...DEFAULT_RATES,...o.rates};data=o.data;save();renderRates();updateHeader()}catch(x){alert("Aa valid payroll backup file nathi.")}};
+  r.readAsText(f);e.target.value="";
+};
+
+/* ---------- summary ---------- */
+function renderSummary(){
+  const {rows}=aggregate($("#from").value,$("#to").value);
+  let h="<thead><tr><th class='sl'>Worker</th>"+ITEMS.map(i=>`<th>${esc(i.name)}</th>`).join("")+"<th class='sr'>Kamai ₹</th></tr></thead><tbody>";
+  rows.forEach(r=>{h+=`<tr><td class="sl py-2">${esc(r.w)}</td>`+ITEMS.map(i=>`<td class="text-center px-2 py-2">${r.q[i.id]?nice(r.q[i.id]):""}</td>`).join("")+`<td class="sr py-2">${fmt(r.t)}</td></tr>`});
+  h+="</tbody><tfoot><tr><td class='sl'>Total</td>"+ITEMS.map(i=>{const s=rows.reduce((a,r)=>a+r.q[i.id],0);return `<td>${s?nice(s):""}</td>`}).join("")+`<td class='sr'>${fmt(rows.reduce((a,r)=>a+r.t,0))}</td></tr></tfoot>`;
+  $("#sumGrid").innerHTML=h;
+}
+function setRange(r){$("#from").value=r[0];$("#to").value=r[1];renderSummary()}
+$("#thisMonth").onclick=()=>setRange(monthRange(0));
+$("#lastMonth").onclick=()=>setRange(monthRange(-1));
+$("#from").onchange=$("#to").onchange=renderSummary;
+$("#export").onclick=()=>{
+  const {rows}=aggregate($("#from").value,$("#to").value),q=s=>'"'+String(s).replace(/"/g,'""')+'"';
+  const L=[["Worker",...ITEMS.map(i=>i.name),"Earnings"].map(q).join(",")];
+  rows.forEach(r=>L.push([q(r.w),...ITEMS.map(i=>nice(r.q[i.id])),r.t.toFixed(2)].join(",")));
+  L.push([q("TOTAL"),...ITEMS.map(i=>nice(rows.reduce((a,r)=>a+r.q[i.id],0))),rows.reduce((a,r)=>a+r.t,0).toFixed(2)].join(","));
+  download(`payroll_${$("#from").value||"start"}_to_${$("#to").value||"end"}.csv`,"\ufeff"+L.join("\r\n"),"text/csv;charset=utf-8");
+};
+
+/* ---------- init ---------- */
+setRange(monthRange(0));
+showTab();
+</script>
+</body>
+</html>
