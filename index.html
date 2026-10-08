@@ -58,7 +58,7 @@
 <header class="bandhani">
   <div class="px-4 pt-4 pb-3 flex items-center justify-between gap-3" style="background:linear-gradient(180deg,rgba(27,31,75,.92),rgba(27,31,75,.78))">
     <div>
-      <div class="text-xs text-amber-200 font-semibold">Piece-rate payroll</div>
+      <div class="text-xs text-amber-200 font-semibold" id="sync">Connect thay chhe…</div>
       <h1 class="text-2xl font-extrabold text-white leading-none" id="title">Pagar Register</h1>
     </div>
     <div class="text-right">
@@ -129,8 +129,27 @@
         <label class="btn cursor-pointer">Backup restore<input type="file" id="restore" accept=".json" class="hidden"></label>
       </div>
     </div>
+    <div class="card p-4">
+      <h2 class="font-extrabold text-lg">Account</h2>
+      <p class="text-sm text-slate-600 mb-2">Login: <b id="who"></b></p>
+      <div class="flex gap-2 flex-wrap">
+        <button class="btn" id="logout">Logout</button>
+        <button class="btn" id="uploadLocal" style="display:none">Aa browser no junо data upload karo</button>
+      </div>
+    </div>
   </section>
 </main>
+
+<!-- LOGIN -->
+<div id="login" class="bandhani" style="position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:16px">
+  <form id="loginForm" class="card p-5 w-full max-w-sm space-y-3">
+    <div><div class="text-2xl font-extrabold leading-none">Pagar Register</div><div class="text-sm text-slate-600">Login karo</div></div>
+    <input id="lgEmail" type="email" autocomplete="username" placeholder="Email" required class="w-full border-2 rounded-xl px-3 py-3 font-semibold" style="border-color:#cfcde6">
+    <input id="lgPass" type="password" autocomplete="current-password" placeholder="Password" required class="w-full border-2 rounded-xl px-3 py-3 font-semibold" style="border-color:#cfcde6">
+    <div id="lgErr" class="text-sm font-semibold" style="color:var(--mad)"></div>
+    <button class="btn btn-dark w-full" type="submit">Login</button>
+  </form>
+</div>
 
 <!-- WORKER ENTRY SHEET -->
 <div id="sheet" role="dialog" aria-modal="true">
@@ -153,7 +172,10 @@
   <button data-tab="rates"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 8h12M6 12h12M6 16h8M4 4h16v16H4z"/></svg>Rates</button>
 </nav>
 
-<script>
+<script type="module">
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import{initializeFirestore,getFirestore,persistentLocalCache,persistentMultipleTabManager,doc,collection,setDoc,deleteDoc,deleteField,onSnapshot,writeBatch}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import{getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 const WORKERS=["LALO","JAYESH","NATU P","HITESH","KANU","MAHESH C","NATUBHAI","RAMSINGH","SHAILESH","KABO","MAHESH","RAJU","BHARAT","NILESH","AMIT","VIJAY"];
 /* Order as per paper register */
 const ITEMS=[
@@ -165,10 +187,21 @@ const ITEMS=[
 ].map(([id,name,rate,step])=>({id,name,rate,step}));
 const DEFAULT_RATES=Object.fromEntries(ITEMS.map(i=>[i.id,i.rate]));
 const K_RATES="payroll_rates_v1",K_DATA="payroll_data_v1";
-const load=(k,f)=>{try{return JSON.parse(localStorage.getItem(k))||f}catch(e){return f}};
-let rates={...DEFAULT_RATES,...load(K_RATES,{})};
-let data=load(K_DATA,{});   // {date:{r:{id:rate}, w:{worker:{id:qty}}}}
-const save=()=>{try{localStorage.setItem(K_RATES,JSON.stringify(rates));localStorage.setItem(K_DATA,JSON.stringify(data))}catch(e){alert("Save nathi thayu: browser storage bhari gayu chhe athva block chhe.")}};
+const firebaseConfig={
+  apiKey:"AIzaSyCECnhBTgDLRGEDlK7xSDLeZmuoUNywZiI",
+  authDomain:"payroll-app-e625e.firebaseapp.com",
+  projectId:"payroll-app-e625e",
+  storageBucket:"payroll-app-e625e.firebasestorage.app",
+  messagingSenderId:"696673459053",
+  appId:"1:696673459053:web:96d50a5711bd0f66401864"
+};
+const app=initializeApp(firebaseConfig);
+let db;try{db=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})})}catch(e){db=getFirestore(app)}
+const auth=getAuth(app);
+let rates={...DEFAULT_RATES},data={},unsubs=[];   // data: {date:{r:{id:rate}, w:{worker:{id:qty}}}}
+const dref=d=>doc(db,"days",d),rref=doc(db,"config","rates");
+const wr=p=>p.catch(e=>{console.error(e);setSync("err")});
+const hasData=d=>data[d]&&Object.values(data[d].w||{}).some(q=>Object.keys(q).length);
 
 const $=s=>document.querySelector(s);
 const fmt=n=>"₹"+(+n).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -185,15 +218,20 @@ let curDate=iso(new Date()),view=window.innerWidth>=900?"grid":"list",tab="entry
 
 /* ---------- shared write ---------- */
 function setQty(w,i,v){
-  v=+v||0;
+  v=+v||0;const day=curDate;
   if(v<=0){
-    const d=data[curDate];
-    if(d?.w?.[w]){delete d.w[w][i];if(!Object.keys(d.w[w]).length)delete d.w[w];if(!Object.keys(d.w).length)delete data[curDate]}
+    const d=data[day];if(!d)return;
+    if(d.w?.[w])delete d.w[w][i];
+    if(!hasData(day)){delete data[day];wr(deleteDoc(dref(day)))}
+    else wr(setDoc(dref(day),{w:{[w]:{[i]:deleteField()}}},{merge:true}));
   }else{
-    if(!data[curDate])data[curDate]={r:{...rates},w:{}};
-    (data[curDate].w[w]??={})[i]=v;
+    const fresh=!data[day]?.r;
+    if(!data[day])data[day]={r:{...rates},w:{}};
+    (data[day].w[w]??={})[i]=v;
+    const p={w:{[w]:{[i]:v}}};if(fresh)p.r={...data[day].r};
+    wr(setDoc(dref(day),p,{merge:true}));
   }
-  save();
+  setSync("pending");
 }
 
 /* ---------- tabs ---------- */
@@ -221,8 +259,8 @@ function renderEntry(){
   const d=data[curDate];
   const old=d&&d.r&&ITEMS.some(i=>+d.r[i.id]!==+rates[i.id]);
   $("#rateNote").classList.toggle("hidden",!old);
-  $("#moveBtn").style.display=d?"":"none";
-  if(!d)$("#movePanel").classList.add("hidden");
+  const hd=hasData(curDate);$("#moveBtn").style.display=hd?"":"none";
+  if(!hd)$("#movePanel").classList.add("hidden");
   if(view==="list")renderList();else renderGrid();
   updateHeader();
 }
@@ -270,7 +308,7 @@ $("#moveGo").onclick=()=>{
   const from=curDate,to=$("#moveTo").value,src=data[from];
   if(!src)return;
   if(!to||to===from){alert("Alag date pasand karo.");return}
-  if(data[to]){
+  if(hasData(to)){
     if(!confirm(prettyDate(to)+" par pehla thi entry chhe. Banne bhegi (jodi) karvi?"))return;
     Object.entries(src.w).forEach(([w,q])=>Object.entries(q).forEach(([i,n])=>{
       const t=(data[to].w[w]??={});t[i]=nice((+t[i]||0)+n);
@@ -279,14 +317,14 @@ $("#moveGo").onclick=()=>{
     if(!confirm(prettyDate(from)+" ni entry "+prettyDate(to)+" par moklvi?"))return;
     data[to]=src;
   }
-  delete data[from];save();curDate=to;
+  wr(setDoc(dref(to),data[to]));wr(deleteDoc(dref(from)));delete data[from];curDate=to;
   $("#movePanel").classList.add("hidden");renderEntry();
 };
 $("#clearDay").onclick=()=>{
   if(!confirm(prettyDate(curDate)+" ni badhi entry kadhi nakhvi? Aa pachhi nahi aave."))return;
-  delete data[curDate];save();$("#movePanel").classList.add("hidden");renderEntry();
+  wr(deleteDoc(dref(curDate)));delete data[curDate];$("#movePanel").classList.add("hidden");renderEntry();
 };
-$("#applyRates").onclick=()=>{data[curDate].r={...rates};save();renderEntry()};
+$("#applyRates").onclick=()=>{data[curDate].r={...rates};wr(setDoc(dref(curDate),{r:rates},{merge:true}));renderEntry()};
 
 /* ---------- worker sheet (mobile friendly) ---------- */
 function openSheet(wi){shIdx=wi;$("#sheet").classList.add("open");document.body.style.overflow="hidden";drawSheet()}
@@ -331,7 +369,7 @@ function monthRange(off=0){const n=new Date();return[iso(new Date(n.getFullYear(
 function aggregate(from,to){
   const rows=WORKERS.map(w=>({w,q:Object.fromEntries(ITEMS.map(i=>[i.id,0])),t:0}));
   const items=Object.fromEntries(ITEMS.map(i=>[i.id,0]));let days=0;
-  Object.keys(data).filter(d=>(!from||d>=from)&&(!to||d<=to)).forEach(d=>{
+  Object.keys(data).filter(d=>hasData(d)&&(!from||d>=from)&&(!to||d<=to)).forEach(d=>{
     days++;const r=dayRates(d);
     rows.forEach(row=>{const q=data[d].w[row.w]||{};ITEMS.forEach(i=>{const n=+q[i.id]||0;row.q[i.id]+=n;row.t+=n*(+r[i.id]||0);items[i.id]+=n*(+r[i.id]||0)})});
   });
@@ -369,14 +407,14 @@ function renderRates(){
 $("#rateList").addEventListener("change",e=>{
   const id=e.target.dataset.r;if(!id)return;const v=parseFloat(e.target.value);
   if(isNaN(v)||v<0){e.target.value=(+rates[id]).toFixed(2);return}
-  rates[id]=v;save();
+  rates[id]=v;wr(setDoc(rref,{rates},{merge:true}));
 });
-$("#resetRates").onclick=()=>{if(confirm("Badha rate default par pachha jaay? Junа divas badlase nahi.")){rates={...DEFAULT_RATES};save();renderRates()}};
+$("#resetRates").onclick=()=>{if(confirm("Badha rate default par pachha jaay? Junа divas badlase nahi.")){rates={...DEFAULT_RATES};wr(setDoc(rref,{rates}));renderRates()}};
 function download(name,text,type){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 $("#backup").onclick=()=>download("payroll_backup_"+iso(new Date())+".json",JSON.stringify({rates,data}),"application/json");
 $("#restore").onchange=e=>{
   const f=e.target.files[0];if(!f)return;const r=new FileReader();
-  r.onload=()=>{try{const o=JSON.parse(r.result);if(!o.rates||!o.data)throw 0;if(!confirm("Aa phone no badho data backup thi badli nakhvo?"))return;rates={...DEFAULT_RATES,...o.rates};data=o.data;save();renderRates();updateHeader()}catch(x){alert("Aa valid payroll backup file nathi.")}};
+  r.onload=()=>{try{const o=JSON.parse(r.result);if(!o.rates||!o.data)throw 0;if(!confirm("Backup no data online database ma umervo? Je divas ni entry pehla thi chhe te backup ni entry thi badlai jashe."))return;importData(o)}catch(x){alert("Aa valid payroll backup file nathi.")}};
   r.readAsText(f);e.target.value="";
 };
 
@@ -401,6 +439,62 @@ $("#export").onclick=()=>{
 };
 
 /* ---------- init ---------- */
+/* ---------- sync, import, login ---------- */
+function setSync(s){
+  $("#sync").textContent=s==="pending"?"Save thay chhe…":s==="offline"?"Offline · pachhi sync thashe":s==="err"?"Save ma problem":"✓ Save thayu";
+}
+function renderCurrent(){
+  if($("#sheet").classList.contains("open")){const st=$("#shRows").scrollTop;drawSheet();$("#shRows").scrollTop=st}
+  if(tab==="entry")renderEntry();else if(tab==="dash")renderDash();else if(tab==="summary")renderSummary();
+  updateHeader();
+}
+let dirty=false;
+function refresh(){const a=document.activeElement;if(a&&a.matches&&a.matches(".qin,.q")){dirty=true;return}dirty=false;renderCurrent()}
+document.addEventListener("focusout",()=>{if(dirty)setTimeout(refresh,60)});
+
+function startSync(){
+  unsubs.push(onSnapshot(collection(db,"days"),{includeMetadataChanges:true},snap=>{
+    let changed=false;
+    snap.docChanges().forEach(c=>{
+      const id=c.doc.id,old=JSON.stringify(data[id]);
+      if(c.type==="removed")delete data[id];else data[id]=c.doc.data();
+      if(old!==JSON.stringify(data[id]))changed=true;
+    });
+    setSync(snap.metadata.hasPendingWrites?"pending":(snap.metadata.fromCache&&!navigator.onLine)?"offline":"ok");
+    if(changed)refresh();
+  },e=>{console.error(e);setSync("err");if(e.code==="permission-denied")alert("Aa email ne data vanchvani permission nathi. Firestore Rules ma tamaro email umero.")}));
+  unsubs.push(onSnapshot(rref,s=>{
+    rates={...DEFAULT_RATES,...(s.data()?.rates||{})};
+    if(tab==="entry")renderEntry();updateHeader();
+  }));
+}
+async function importData(o){
+  try{
+    const days=Object.entries(o.data||{});
+    for(let k=0;k<days.length;k+=400){const b=writeBatch(db);days.slice(k,k+400).forEach(([d,v])=>b.set(dref(d),v));await b.commit()}
+    if(o.rates)await setDoc(rref,{rates:{...DEFAULT_RATES,...o.rates}},{merge:true});
+    alert(days.length+" divas no data upload thayo.");
+  }catch(e){alert("Upload ma problem: "+e.message)}
+}
+function localData(){try{return{data:JSON.parse(localStorage.getItem(K_DATA)||"{}"),rates:JSON.parse(localStorage.getItem(K_RATES)||"null")}}catch(e){return null}}
+function checkLocal(){const l=localData();$("#uploadLocal").style.display=l&&Object.keys(l.data).length?"":"none"}
+$("#uploadLocal").onclick=()=>{const l=localData();if(l&&confirm("Aa browser no junо data online database ma upload karvo?"))importData(l)};
+$("#logout").onclick=()=>signOut(auth);
+$("#loginForm").addEventListener("submit",async e=>{
+  e.preventDefault();$("#lgErr").textContent="";
+  try{await signInWithEmailAndPassword(auth,$("#lgEmail").value.trim(),$("#lgPass").value)}
+  catch(x){
+    const c=x.code||"";
+    $("#lgErr").textContent=/invalid|user-not-found|wrong-password/.test(c)?"Email ke password khotu chhe.":c==="auth/network-request-failed"?"Internet nathi.":c==="auth/too-many-requests"?"Ghana prayas thaya, thodi var pachhi try karo.":"Login na thayu: "+c;
+  }
+});
+onAuthStateChanged(auth,u=>{
+  unsubs.forEach(f=>f());unsubs=[];data={};
+  if(u){$("#login").style.display="none";$("#who").textContent=u.email;$("#lgPass").value="";startSync();checkLocal()}
+  else{$("#login").style.display="flex"}
+  renderCurrent();
+});
+
 setRange(monthRange(0));
 showTab();
 </script>
