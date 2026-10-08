@@ -81,7 +81,13 @@
     <div class="flex items-center gap-2 mb-3">
       <button class="btn btn-dark" id="vList">Worker list</button>
       <button class="btn" id="vGrid">Register</button>
+      <button class="btn" id="moveBtn" style="display:none">Date badlo</button>
       <button class="btn ml-auto" id="today">Aaj</button>
+    </div>
+    <div id="movePanel" class="hidden card p-3 mb-3">
+      <div class="text-sm font-semibold mb-2">Aa divas ni badhi entry kya date par moklvi chhe?</div>
+      <div class="flex gap-2"><input type="date" id="moveTo" class="flex-1 min-w-0"><button class="btn btn-dark" id="moveGo">Moklo</button></div>
+      <button class="underline text-sm mt-3" id="clearDay" style="color:var(--mad)">Aa divas ni badhi entry kadhi nakho</button>
     </div>
     <div id="rateNote" class="hidden mb-3 text-sm bg-amber-50 border-2 border-amber-300 rounded-xl px-3 py-2">
       Aa divas junа rate thi chhe. <button id="applyRates" class="underline font-bold">Have na rate lagavo</button>
@@ -215,6 +221,8 @@ function renderEntry(){
   const d=data[curDate];
   const old=d&&d.r&&ITEMS.some(i=>+d.r[i.id]!==+rates[i.id]);
   $("#rateNote").classList.toggle("hidden",!old);
+  $("#moveBtn").style.display=d?"":"none";
+  if(!d)$("#movePanel").classList.add("hidden");
   if(view==="list")renderList();else renderGrid();
   updateHeader();
 }
@@ -257,6 +265,27 @@ $("#nextDay").onclick=()=>setDate(shift(curDate,1));
 $("#today").onclick=()=>setDate(iso(new Date()));
 $("#vList").onclick=()=>{view="list";renderEntry()};
 $("#vGrid").onclick=()=>{view="grid";renderEntry()};
+$("#moveBtn").onclick=()=>{$("#movePanel").classList.toggle("hidden");$("#moveTo").value=shift(curDate,-1)};
+$("#moveGo").onclick=()=>{
+  const from=curDate,to=$("#moveTo").value,src=data[from];
+  if(!src)return;
+  if(!to||to===from){alert("Alag date pasand karo.");return}
+  if(data[to]){
+    if(!confirm(prettyDate(to)+" par pehla thi entry chhe. Banne bhegi (jodi) karvi?"))return;
+    Object.entries(src.w).forEach(([w,q])=>Object.entries(q).forEach(([i,n])=>{
+      const t=(data[to].w[w]??={});t[i]=nice((+t[i]||0)+n);
+    }));
+  }else{
+    if(!confirm(prettyDate(from)+" ni entry "+prettyDate(to)+" par moklvi?"))return;
+    data[to]=src;
+  }
+  delete data[from];save();curDate=to;
+  $("#movePanel").classList.add("hidden");renderEntry();
+};
+$("#clearDay").onclick=()=>{
+  if(!confirm(prettyDate(curDate)+" ni badhi entry kadhi nakhvi? Aa pachhi nahi aave."))return;
+  delete data[curDate];save();$("#movePanel").classList.add("hidden");renderEntry();
+};
 $("#applyRates").onclick=()=>{data[curDate].r={...rates};save();renderEntry()};
 
 /* ---------- worker sheet (mobile friendly) ---------- */
